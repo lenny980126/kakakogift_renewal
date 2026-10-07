@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>카카오톡 선물하기 개선안 프로토타입</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #191919;
+    --muted: #8a8a8a;
+    --sub: #777;
+    --line: #eee;
+    --soft: #f6f6f6;
+    --yellow: #fee500;
+    --red: #ff4646;
+    --chat: #b2c7da;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Noto Sans KR", sans-serif;
+    background: #ececef;
+    color: var(--ink);
+    letter-spacing: -0.2px;
+  }
+  button, input { font-family: inherit; }
+  button { border: 0; background: none; padding: 0; cursor: pointer; color: inherit; }
+  img { display: block; max-width: 100%; }
+  .stage {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 28px 16px 40px;
+  }
+  .intro { text-align: center; margin-bottom: 18px; }
+  .intro h1 { margin: 0; font-size: 22px; font-weight: 700; }
+  .intro p { margin: 6px 0 0; color: #666; font-size: 13px; }
+  .modes { display: flex; gap: 8px; margin-top: 14px; justify-content: center; }
+  .modes button { height: 36px; padding: 0 14px; border-radius: 18px; background: #fff; font-size: 13px; font-weight: 700; color: #666; }
+  .modes button.on { background: #191919; color: #fff; }
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: #fff;
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,.08);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .status {
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 30px 0;
+    flex: none;
+    background: #fff;
+  }
+  .status b { font-size: 15px; }
+  .status .sys { display: flex; gap: 6px; align-items: center; }
+  .app { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
+  .scroll { flex: 1; overflow-x: hidden; overflow-y: auto; min-height: 0; min-width: 0; width: 100%; }
+  #app.fwd { animation: inRight .34s cubic-bezier(.22,.7,.25,1); }
+  #app.back { animation: inLeft .34s cubic-bezier(.22,.7,.25,1); }
+  @keyframes inRight { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+  @keyframes inLeft { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+  .fanfare { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 30; }
+  .fanfare i {
+    position: absolute; top: 46%; left: var(--left);
+    width: 9px; height: 14px; border-radius: 2px;
+    animation: burst 1.15s ease-out forwards;
+  }
+  .fanfare b {
+    position: absolute; top: 40%; left: 50%; font-size: 28px; font-weight: 400;
+    animation: burst 1.15s ease-out forwards;
+  }
+  @keyframes burst {
+    0% { transform: translate(-50%, 0) scale(.4) rotate(0deg); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--x)), var(--y)) scale(1) rotate(var(--r)); opacity: 0; }
+  }
+  .scroll::-webkit-scrollbar { width: 0; }
+  .header {
+    height: 52px;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    flex: none;
+    background: #fff;
+  }
+  .header h1 { margin: 0 0 0 2px; font-size: 17px; font-weight: 700; }
+  .header .spacer { flex: 1; }
+  .icon-btn { width: 40px; height: 40px; display: grid; place-items: center; }
+  .gift-mark { width: 22px; height: 22px; margin-right: 2px; }
+  .nav {
+    height: 78px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    padding-top: 8px;
+    background: #fff;
+    flex: none;
+    position: relative;
+  }
+  .nav button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; color: #9a9a9a; font-size: 11px; }
+  .nav button.on { color: var(--ink); font-weight: 700; }
+  .nav .wish-slot { position: relative; flex: 1; }
+  .nav-spacer { display: block; height: 40px; }
+  .nav .wish-btn { position: absolute; left: 0; right: 0; top: -26px; display: flex; flex-direction: column; align-items: center; gap: 3px; color: #9a9a9a; font-size: 11px; }
+  .nav .wish-btn.on { color: var(--ink); font-weight: 700; }
+  .bubble {
+    width: 60px; height: 60px; border-radius: 30px; background: #fff;
+    border: 1px solid #e8e8e8; box-shadow: 0 6px 7px rgba(0,0,0,.12);
+    display: grid; place-items: center;
+  }
+  .bubble img { width: 36px; height: 36px; object-fit: contain; }
+  .card {
+    margin: 2px 16px 0;
+    border: 1px solid #ededed;
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: 0 4px 7px rgba(0,0,0,.04);
+    position: relative;
+  }
+  .who { display: flex; gap: 14px; align-items: center; }
+  .plus {
+    width: 72px; height: 72px; border-radius: 28px; border: 2px dashed #d3d3d3;
+    background: #fafafa; color: #bdbdbd; font-size: 30px; font-weight: 300;
+    display: grid; place-items: center; flex: none;
+  }
+  .who h2 { margin: 0; font-size: 20px; line-height: 27px; letter-spacing: -0.5px; }
+  .who p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+  .friends {
+    display: flex; gap: 10px; overflow-x: auto; padding: 14px 0 0; margin-top: 16px;
+    border-top: 1px solid #f2f2f2;
+  }
+  .friends::-webkit-scrollbar { height: 0; }
+  .friend { min-width: 54px; display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; font-size: 12px; }
+  .avatar {
+    width: 50px; height: 50px; border-radius: 19px; display: grid; place-items: center; font-size: 27px;
+  }
+  .friend.on .avatar { box-shadow: 0 0 0 2px var(--ink); }
+  .cake { position: absolute; right: -2px; top: -6px; font-size: 15px; }
+  .edit {
+    position: absolute; right: 14px; top: 14px;
+    border: 1px solid #ddd; border-radius: 999px; padding: 4px 10px;
+    font-size: 12px; color: #555; background: #fff;
+  }
+  .edit.off { opacity: .35; }
+  .cats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px 0; padding: 24px 10px 6px; }
+  .cats button { display: flex; flex-direction: column; align-items: center; gap: 7px; font-size: 12px; color: #333; }
+  .cats .ico { width: 54px; height: 54px; border-radius: 20px; background: var(--soft); display: grid; place-items: center; font-size: 26px; }
+  .banner, .surprise {
+    display: flex; align-items: center; width: calc(100% - 32px); margin: 18px 16px 0;
+    height: 112px; border-radius: 18px; padding: 0 22px; text-align: left; box-sizing: border-box;
+  }
+  .banner { background: linear-gradient(142deg, #fff6b8 8%, #ffe77a 92%); }
+  .surprise { margin-top: 10px; background: linear-gradient(135deg, #e7f3ff 0%, #d7e8fb 100%); }
+  .banner small, .surprise small { display: block; font-size: 13px; font-weight: 700; }
+  .banner small { color: #7a6500; }
+  .surprise small { color: #3d5f86; }
+  .banner strong, .surprise strong { display: block; margin-top: 4px; font-size: 20px; letter-spacing: -0.5px; line-height: 1.25; }
+  .banner em, .surprise em { display: block; margin-top: 6px; font-style: normal; font-size: 13px; font-weight: 700; }
+  .banner em { color: #5a4b00; }
+  .surprise em { color: #3d5f86; }
+  .banner .trophy, .surprise .trophy { margin-left: auto; font-size: 58px; line-height: 1; filter: drop-shadow(0 6px 6px rgba(0,0,0,.12)); }
+  .section-title { padding: 24px 16px 14px; font-size: 18px; font-weight: 700; }
+  .tabs { margin: 0 16px; background: var(--soft); border-radius: 12px; padding: 4px; display: flex; }
+  .tabs button { flex: 1; height: 38px; border-radius: 9px; color: #888; font-size: 14px; font-weight: 600; }
+  .tabs button.on { background: #fff; color: #111; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .plist { padding: 6px 16px 10px; }
+  .row { display: flex; gap: 12px; padding: 12px 0; width: 100%; text-align: left; align-items: flex-start; min-height: 108px; }
+  .rank { width: 20px; padding-top: 2px; font-size: 17px; font-weight: 800; line-height: 20px; text-align: center; flex: none; }
+  .thumb { width: 84px; height: 84px; border-radius: 12px; object-fit: cover; flex: none; background: #f3f3f3; }
+  .meta { min-width: 0; flex: 1; }
+  .meta .brand { display: block; font-size: 12px; line-height: 14px; color: #8a8a8a; font-weight: 400; }
+  .meta .name {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+    margin-top: 0; font-size: 14px; font-weight: 400;
+    line-height: 19.6px; letter-spacing: -0.2px; color: #191919;
+  }
+  .meta .price { display: block; margin-top: 4px; font-size: 15px; font-weight: 700; line-height: 18px; }
+  .price .off { color: var(--red); font-weight: 800; margin-right: 6px; }
+  .meta .note { display: block; margin-top: 5px; color: var(--sub); font-size: 12px; line-height: 14px; font-weight: 400; }
+  .row .thumb.ph { width: 84px; height: 84px; aspect-ratio: auto; }
+  .row .thumb.ph .emo { font-size: 34px; }
+  .more {
+    margin: 4px 16px 0; height: 44px; width: calc(100% - 32px);
+    border: 1px solid #e5e5e5; border-radius: 12px; color: #555; font-size: 14px;
+  }
+  .pad { height: 24px; }
+  .chips { display: flex; gap: 6px; overflow-x: auto; padding: 4px 16px 12px; }
+  .chips::-webkit-scrollbar { height: 0; }
+  .chips button { height: 35px; padding: 0 13px; border-radius: 999px; background: var(--soft); font-size: 13px; white-space: nowrap; }
+  .chips button.on { background: var(--ink); color: #fff; font-weight: 700; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 12px; padding: 8px 16px 24px; }
+  .grid button { text-align: left; position: relative; }
+  .lock { position: absolute; left: 8px; top: 8px; background: rgba(25,25,25,.78); color: #fff; border-radius: 999px; padding: 3px 7px; font-size: 11px; font-weight: 700; }
+  .grid img, .grid .ph { width: 100%; aspect-ratio: 1; border-radius: 12px; object-fit: cover; background: #f6efe6; }
+  .ph { display: flex; align-items: center; justify-content: center; overflow: hidden; min-width: 0; max-width: 100%; }
+  .ph .emo { font-size: 42px; line-height: 1; }
+  .grid .brand { margin-top: 8px; color: var(--muted); font-size: 12px; }
+  .grid .name { margin-top: 2px; font-size: 14px; line-height: 1.4; min-height: 39px; }
+  .grid .price { margin-top: 4px; font-weight: 700; font-size: 15px; }
+  .profile { display: flex; gap: 14px; align-items: center; padding: 12px 18px 20px; }
+  .profile .avatar { width: 64px; height: 64px; border-radius: 24px; font-size: 34px; }
+  .profile h2 { margin: 0; font-size: 19px; }
+  .profile p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+  .point {
+    margin: 0 16px; border-radius: 16px; padding: 16px 18px;
+    background: linear-gradient(149deg, #fff6b8 8%, #ffe77a 92%);
+    display: flex; align-items: center;
+  }
+  .point small { color: #6b5a00; font-size: 12.5px; }
+  .point strong { display: block; margin-top: 2px; font-size: 22px; font-weight: 800; }
+  .point img { width: 58px; height: 47px; object-fit: contain; margin-left: auto; }
+  .menu { margin-top: 12px; }
+  .menu button { width: 100%; display: flex; align-items: center; padding: 16px 18px; border-bottom: 1px solid #f5f5f5; font-size: 15px; }
+  .menu button span { margin-left: auto; color: #bbb; }
+  .hero-card {
+    margin: 4px 16px 0; border-radius: 24px; padding: 26px 20px 22px; text-align: center; overflow: hidden;
+    background: radial-gradient(circle at 50% 28%, #fff7c2 0%, #ffee61 35%, #fee229 62%, #fee500 100%);
+  }
+  .pill { display: inline-block; background: rgba(0,0,0,.85); color: #fff; border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 700; }
+  .hero-card h2 { margin: 12px 0 0; font-size: 30px; font-weight: 900; letter-spacing: -1.2px; }
+  .hero-card p { margin: 6px auto 0; max-width: 260px; color: #5c4e00; font-size: 13.5px; line-height: 20.25px; font-weight: 400; }
+  .trophy-wrap { width: 170px; height: 150px; margin: 2px auto 0; position: relative; display: grid; place-items: center; font-size: 104px; line-height: 1; filter: drop-shadow(0 14px 10px rgba(150,100,0,.35)); }
+  .trophy-wrap .sp { position: absolute; font-size: 22px; }
+  .trophy-wrap .sp.a { left: 10px; top: 16px; }
+  .trophy-wrap .sp.b { right: 8px; top: 42px; }
+  .start {
+    width: 220px; height: 58px; border-radius: 999px; background: #191919; color: #fff;
+    font-size: 20px; font-weight: 900; letter-spacing: 0.5px;
+    box-shadow: 0 8px 0 #000, 0 14px 10px rgba(0,0,0,.2);
+  }
+  .filters { display: flex; gap: 6px; padding: 0 16px 2px; }
+  .filters button { height: 35px; padding: 0 13px; border-radius: 999px; background: #fff; border: 1px solid #e3e3e3; color: #555; font-size: 13px; font-weight: 400; }
+  .filters button.on { background: #191919; color: #fff; border-color: #191919; font-weight: 400; }
+  .match-head { text-align: center; padding: 6px 16px 0; }
+  .match-head h2 { margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -0.8px; }
+  .badge { display: inline-block; margin-top: 10px; background: var(--yellow); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 700; }
+  .bar { height: 6px; background: #f1f1f1; border-radius: 999px; margin: 14px 36px 0; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--ink); }
+  .vs { display: flex; gap: 12px; padding: 26px 16px 0; position: relative; min-width: 0; }
+  .vs button { flex: 1; min-width: 0; overflow: hidden; border: 2px solid #eee; border-radius: 20px; padding: 10px 10px 14px; text-align: left; background: #fff; }
+  .vs button:active { border-color: var(--ink); }
+  .vs img, .vs .ph { width: 100%; height: 168px; object-fit: cover; border-radius: 12px; background: #eee; aspect-ratio: auto; }
+  .vs .ph { object-fit: contain; }
+  .vs .ph .emo { font-size: 52px; }
+  .vs .brand { margin-top: 10px; color: var(--muted); font-size: 12px; }
+  .vs .name { margin-top: 2px; font-size: 13.5px; line-height: 1.4; min-height: 38px; }
+  .vs .price { margin-top: 4px; font-weight: 700; }
+  .vs-mark {
+    position: absolute; left: 50%; top: 118px; transform: translateX(-50%);
+    width: 50px; height: 50px; border-radius: 25px; background: var(--ink); color: var(--yellow);
+    border: 4px solid #fff; display: grid; place-items: center; font-weight: 900; font-size: 18px;
+  }
+  .hint { text-align: center; color: #999; font-size: 13px; padding: 22px 16px; }
+  .picked { margin: 16px; border-radius: 18px; overflow: hidden; border: 1px solid #eee; position: relative; }
+  .picked img, .picked .ph { width: 100%; height: 220px; object-fit: cover; aspect-ratio: auto; }
+  .picked .ph { object-fit: contain; }
+  .picked .ph .emo { font-size: 72px; }
+  .crown { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); background: var(--ink); color: var(--yellow); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 700; }
+  .picked .body { padding: 14px 16px 16px; }
+  .result-note { text-align: center; padding: 16px 16px 0; }
+  .result-note h2 { margin: 8px 0 0; font-size: 20px; }
+  .result-note p { margin: 6px 0 0; color: #777; font-size: 13px; }
+  .split { display: flex; gap: 8px; padding: 0 16px; }
+  .split button { flex: 1; height: 50px; border-radius: 12px; font-size: 15px; }
+  .split .ghost { border: 1px solid #e5e5e5; }
+  .split .solid { background: var(--ink); color: #fff; font-weight: 700; }
+  .pct { margin-left: auto; font-weight: 700; font-size: 14px; align-self: center; }
+  .track { height: 6px; background: #f1f1f1; border-radius: 999px; margin-top: 8px; }
+  .track i { display: block; height: 100%; background: var(--yellow); border-radius: 999px; }
+  .hero-img { width: 100%; max-width: 100%; height: 280px; object-fit: cover; background: #f6efe6; }
+  .hero-img.ph { aspect-ratio: auto; }
+  .hero-img.ph .emo { font-size: 92px; }
+  .detail { padding: 20px 18px 8px; }
+  .detail .brand { color: var(--muted); font-size: 13px; }
+  .detail h2 { margin: 6px 0 0; font-size: 20px; line-height: 1.35; }
+  .detail .price { margin-top: 10px; font-size: 24px; font-weight: 800; }
+  .wish-banner {
+    margin-top: 18px; background: #fff1e8; border-radius: 18px; padding: 16px 16px 16px 10px;
+    display: flex; gap: 8px; align-items: center;
+  }
+  .wish-banner img { flex: none; width: 72px; height: 72px; object-fit: contain; }
+  .wish-banner p { flex: 1; min-width: 0; margin: 0; font-size: 14px; line-height: 1.45; font-weight: 500; text-align: left; }
+  .wish-banner b { display: block; font-weight: 800; margin-bottom: 2px; }
+  .wish-banner em { font-style: normal; color: #ff4b4b; font-weight: 800; }
+  .specs { margin-top: 20px; border-top: 1px solid #f3f3f3; }
+  .specs div { display: flex; padding: 13px 0; border-bottom: 1px solid #f6f6f6; font-size: 14px; }
+  .specs b { width: 90px; font-weight: 500; color: #555; }
+  .disclaimer { color: #999; font-size: 12px; line-height: 1.45; padding: 16px; }
+  .bottom-bar {
+    display: flex; gap: 10px; padding: 11px 16px 18px; background: #fff; border-top: 1px solid #f3f3f3; flex: none;
+  }
+  .bottom-bar .icon-sq { width: 54px; height: 54px; border-radius: 14px; background: var(--soft); font-size: 22px; }
+  .cta { flex: 1; height: 54px; border-radius: 12px; background: var(--yellow); font-size: 16px; font-weight: 700; }
+  .cta.dark { background: var(--ink); color: #fff; }
+  .block { padding: 20px 16px 8px; }
+  .block h3 { margin: 0 0 8px; font-size: 16px; }
+  .person { display: flex; align-items: center; gap: 12px; padding: 8px 0 12px; }
+  .person .avatar { width: 48px; height: 48px; border-radius: 16px; font-size: 26px; }
+  .person b { font-size: 16px; }
+  .person small { display: block; color: var(--muted); margin-top: 2px; }
+  .change { margin-left: auto; border: 1px solid #e5e5e5; border-radius: 8px; padding: 6px 12px; font-size: 13px; }
+  .msg-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; }
+  .msg-chips button { height: 35px; padding: 0 13px; border-radius: 999px; background: var(--soft); white-space: nowrap; font-size: 13px; }
+  .msg-chips button.on { background: var(--ink); color: #fff; }
+  .letter { margin-top: 8px; background: #fffaf0; border-radius: 16px; padding: 18px; min-height: 140px; position: relative; }
+  .letter .emo { font-size: 36px; }
+  .letter p { margin: 8px 0 0; font-size: 15px; }
+  .letter small { position: absolute; right: 14px; bottom: 10px; color: #aaa; }
+  .pay-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+  .qty { margin-left: auto; display: flex; border: 1px solid #eee; border-radius: 8px; overflow: hidden; }
+  .qty button, .qty span { width: 32px; height: 30px; display: grid; place-items: center; }
+  .pay-opt { width: 100%; display: flex; align-items: center; gap: 10px; height: 44px; font-size: 15px; }
+  .radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #ccc; }
+  .pay-opt.on .radio { border-color: var(--ink); box-shadow: inset 0 0 0 4px var(--ink); }
+  .sum { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
+  .sum.total { border-top: 1px solid #f0f0f0; margin-top: 6px; padding-top: 14px; font-weight: 800; font-size: 18px; }
+  .sum .minus { color: var(--red); }
+  .note-box { background: #fff8dc; border-radius: 12px; padding: 12px 14px; font-size: 13px; line-height: 1.45; margin-top: 8px; }
+  .done { text-align: center; padding: 40px 24px 10px; }
+  .done-actions { padding: 8px 24px 28px; display: flex; flex-direction: column; gap: 8px; }
+  .done-actions button { width: 100%; margin: 0; height: 54px; border-radius: 12px; font-size: 16px; font-weight: 700; }
+  .done-actions .line, .done-dock .line { border: 1px solid #e5e5e5; background: #fff; color: #191919; }
+  .done-dock { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 12px 24px 18px; background: #fff; }
+  .done-dock button { width: 100%; height: 54px; border-radius: 14px; font-size: 16px; font-weight: 700; flex: none; }
+  .done-dock .line { height: 50px; }
+  .scroll.done-page .disclaimer { padding: 16px 24px; }
+  .scroll.done-page .receipt { margin-left: 24px; margin-right: 24px; }
+  .done .big { font-size: 72px; line-height: 0; }
+  .done .gift-art { width: 110px; height: 110px; display: block; margin: 0 auto; }
+  .done h2 { margin: 8px 0 0; font-size: 24px; line-height: 1.35; }
+  .done p { color: #666; }
+  .receipt { margin: 18px 24px; background: #fafafa; border-radius: 16px; padding: 16px; display: flex; gap: 12px; text-align: left; align-items: center; }
+  .receipt img, .receipt .ph { width: 60px; height: 60px; border-radius: 12px; object-fit: cover; aspect-ratio: auto; flex: none; }
+  .receipt .ph { object-fit: contain; }
+  .receipt .ph .emo { font-size: 28px; }
+  .rally { margin: 0 24px; background: #fff8dc; border-radius: 12px; padding: 12px; font-weight: 700; font-size: 14px; display: flex; gap: 8px; align-items: center; justify-content: center; }
+  .rally img { width: 22px; height: 22px; object-fit: contain; }
+  .done-note { margin: 16px 24px 0; color: #ff4646; text-align: left; }
+  .done-note.center { text-align: center; }
+  .done-note.center p { text-align: center; max-width: 340px; margin: 0 auto; font-size: 11px; font-weight: 400; line-height: 15px; color: #ff4646; }
+  .done-note .rally-line { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; line-height: 1.4; }
+  .done-note .rally-line img { width: 18px; height: 18px; object-fit: contain; flex: none; }
+  .done-note p { margin: 4px 0 0; color: #ff3b30; font-size: 12.5px; line-height: 1.45; font-weight: 500; padding: 0; }
+  .friend-head { display: flex; gap: 12px; align-items: center; }
+  .friend-head .avatar { width: 64px; height: 64px; border-radius: 22px; font-size: 32px; }
+  .tag { display: inline-block; background: #fff3c4; border-radius: 999px; padding: 3px 8px; font-size: 12px; margin-top: 4px; }
+  .wish-strip { margin-top: 14px; }
+  .wish-strip .label { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; }
+  .wish-strip .label em { font-style: normal; background: #191919; color: var(--yellow); border-radius: 999px; font-size: 11px; padding: 2px 7px; }
+  .hscroll { display: flex; gap: 10px; overflow-x: auto; padding-top: 10px; }
+  .hscroll::-webkit-scrollbar { height: 0; }
+  .mini { width: 108px; text-align: left; flex: none; }
+  .mini img, .mini .ph { width: 108px; height: 108px; border-radius: 12px; object-fit: cover; }
+  .mini .ph { object-fit: contain; }
+  .mini .ph .emo { font-size: 40px; }
+  .mini .brand { margin-top: 6px; font-size: 12px; color: var(--muted); }
+  .mini .name { font-size: 13px; line-height: 1.3; min-height: 34px; }
+  .mini .price { font-weight: 700; font-size: 13px; }
+  .pingpong { position: relative; height: 458px; overflow: hidden; background: #fff6c8; }
+  .pingpong .scene { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+  .pingpong .scene.b { animation: ppFade 4.8s ease-in-out infinite; }
+  @keyframes ppFade { 0%, 36% { opacity: 0; } 48%, 84% { opacity: 1; } 100% { opacity: 0; } }
+  .pp-copy { position: absolute; left: 0; right: 0; top: 24px; text-align: center; z-index: 2; }
+  .event { display: inline-block; background: var(--yellow); border-radius: 999px; font-size: 12px; font-weight: 800; padding: 4px 9px; }
+  .pp-copy h2 { margin: 10px 0 14px; font-size: 28px; font-weight: 900; letter-spacing: -0.8px; }
+  .pp-copy .benefit { margin: 0 18px; }
+  .pp-copy .benefit div { background: rgba(255,255,255,.92); }
+  .pp-slogan {
+    position: absolute; left: 79.75px; top: 380.9px; width: 230.5px; height: 51px; z-index: 2;
+    display: flex; align-items: center; justify-content: center;
+    background: #fff; border-radius: 999px; font-weight: 800; font-size: 16px; white-space: nowrap;
+    box-shadow: 0 6px 16px rgba(0,0,0,.06);
+  }
+  .benefit { display: flex; gap: 10px; text-align: left; }
+  .benefit div { flex: 1; background: #fff8dc; border-radius: 14px; padding: 12px; font-size: 13px; line-height: 1.4; }
+  .benefit b { display: block; margin-bottom: 4px; }
+  .slogan { margin-top: 12px; font-weight: 800; }
+  .score { margin: 8px 16px 0; border: 1px solid #ededed; border-radius: 18px; padding: 16px; }
+  .score-top { display: flex; gap: 12px; align-items: center; }
+  .score-top img { width: 52px; height: 52px; object-fit: contain; }
+  .lv { color: #888; font-size: 13px; margin-left: 6px; }
+  .meter { height: 8px; background: #f1f1f1; border-radius: 99px; margin: 14px 0 6px; }
+  .meter i { display: block; width: 72%; height: 100%; background: var(--yellow); border-radius: 99px; }
+  .meter-labels { display: flex; justify-content: space-between; color: #999; font-size: 12px; }
+  .stats { display: flex; margin-top: 12px; text-align: center; }
+  .stats div { flex: 1; }
+  .stats small { color: #888; font-size: 12px; }
+  .stats b { display: block; margin-top: 4px; font-size: 16px; }
+  .seg { display: flex; border-bottom: 1px solid #f2f2f2; margin-top: 8px; }
+  .seg button { flex: 1; height: 48px; font-size: 15px; color: #888; }
+  .seg button.on { color: var(--ink); font-weight: 700; box-shadow: inset 0 -2px 0 var(--ink); }
+  .lock { display: inline-block; background: #f3f3f3; border-radius: 999px; font-size: 11px; padding: 2px 6px; margin-left: 4px; }
+  .add-tile { border: 1px dashed #ddd; border-radius: 12px; min-height: 220px; display: grid; place-items: center; color: #888; }
+  .chat { background: var(--chat); flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .chat-head { height: 54px; display: flex; align-items: center; padding: 0 8px; position: relative; }
+  .back-count { display: flex; align-items: center; font-size: 15px; }
+  .chat-head h1 { position: absolute; left: 50%; transform: translateX(-50%); margin: 0; font-size: 17px; }
+  .chat-head .spacer { margin-left: auto; display: flex; }
+  .thread { flex: 1; overflow: auto; padding: 6px 12px 12px; }
+  .date { text-align: center; margin: 10px 0; }
+  .date span { background: rgba(0,0,0,.12); color: #fff; border-radius: 999px; padding: 5px 12px; font-size: 12px; }
+  .msg { display: flex; gap: 8px; margin: 8px 0; align-items: flex-start; }
+  .msg .avatar { width: 38px; height: 38px; border-radius: 15px; font-size: 21px; }
+  .msg .who { font-size: 12px; color: #444; margin-bottom: 4px; display: block; }
+  .bubble-txt { background: #fff; border-radius: 14px; padding: 8px 11px; font-size: 14.5px; line-height: 1.45; max-width: 220px; }
+  .bubble-txt b { color: #c2410c; }
+  .time { font-size: 10.5px; color: #556; align-self: flex-end; padding-bottom: 2px; }
+  .msg.me { justify-content: flex-end; }
+  .msg.me .bubble-txt { background: var(--yellow); }
+  .composer-wrap { background: #fff; padding: 8px 8px 18px; position: relative; }
+  .heart-cta {
+    position: absolute; left: 12px; right: 12px; top: -46px; height: 40px; border-radius: 999px;
+    background: #fff; border: 2px solid #ffb800; box-shadow: 0 6px 8px rgba(0,0,0,.15);
+    font-weight: 700; font-size: 14px;
+  }
+  .composer { display: flex; align-items: center; gap: 4px; }
+  .composer .plus { width: 34px; height: 34px; border: 0; background: none; font-size: 24px; color: #777; font-weight: 300; }
+  .composer .field { flex: 1; height: 38px; border-radius: 19px; background: #f3f3f3; display: flex; align-items: center; padding: 0 14px; color: #757575; font-size: 14.5px; }
+  .hash { width: 38px; height: 38px; border-radius: 19px; background: var(--yellow); font-weight: 800; }
+  .sheet-mask { position: absolute; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: flex-end; }
+  .sheet { background: #fff; width: 100%; border-radius: 24px 24px 0 0; padding: 10px 20px 28px; }
+  .grab { width: 40px; height: 5px; border-radius: 9px; background: #ddd; margin: 0 auto 8px; }
+  .sheet h3 { margin: 8px 0 0; font-size: 17px; }
+  .sheet .sub { color: #888; font-size: 13px; margin: 6px 0 0; }
+  .mark { background: linear-gradient(#fff 55%, #fff08a 55%); }
+  .cheer-row { display: flex; gap: 8px; padding-top: 18px; }
+  .cheer-row button { width: 96px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 13px; }
+  .round-img { width: 88px; height: 88px; border-radius: 44px; object-fit: cover; border: 2px solid #eee; background: #fff3d6; flex: none; }
+  .round-img.ph .emo { font-size: 34px; }
+  .dash { width: 88px; height: 88px; border-radius: 44px; border: 2px dashed #eee; background: #f6f6f6; display: grid; place-items: center; font-size: 38px; color: #999; font-weight: 300; }
+  .cheer-row small { color: #888; font-size: 12px; }
+  .more-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 10px; padding-top: 16px; max-height: 420px; overflow: auto; }
+  .more-grid button { text-align: left; }
+  .more-grid img, .more-grid .ph { width: 100%; aspect-ratio: 1; border-radius: 12px; object-fit: cover; }
+  .more-grid .ph { object-fit: contain; }
+  .more-grid .ph .emo { font-size: 36px; }
+  .more-grid .brand { margin-top: 6px; color: var(--muted); font-size: 12px; }
+  .more-grid .name { font-size: 13px; line-height: 1.3; min-height: 34px; }
+  .more-grid .price { font-weight: 700; font-size: 13px; }
+  .sheet-head { display: flex; align-items: center; }
+  .sheet-head button { margin-left: auto; width: 40px; height: 40px; font-size: 22px; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="intro">
+    <h1>카카오톡 선물하기 개선안</h1>
+    <p>팀 삼공주 · 핑퐁 위시, 진짜 1위 맞히기, 뜻밖의 선물</p>
+    <div class="modes">
+      <button type="button" id="open-gift" class="on">선물하기</button>
+      <button type="button" id="open-chat">뜻밖의 선물</button>
+    </div>
+  </div>
+  <div class="phone" id="phone">
+    <div class="status" id="status"></div>
+    <div class="app" id="app"></div>
+  </div>
+</div>
+<script>
+const A = "assets/";
+const logo = A + "cb372.png";
+const products = {
+  baskin: { id:"baskin", brand:"배스킨라빈스", name:"파인트 아이스크림", price:9800, img:A+"4984b.png", bg:"#fde7ef", friends:23, cat:"food" },
+  starbucks: { id:"starbucks", brand:"스타벅스", name:"카페 아메리카노 T 2잔 + 부드러운 생크림 카스텔라", price:15700, img:A+"e3919.png", card:A+"6aa76.png", bg:"#e6f2ea", friends:19, cat:"food" },
+  loccitane: { id:"loccitane", brand:"록시땅", name:"시어 버터 핸드크림 30ml 듀오 세트", price:39000, sale:"10%", pay:35100, img:A+"6c2c8.png", bg:"#fff5dd", friends:14, cat:"beauty" },
+  mega: { id:"mega", brand:"메가MGC커피", name:"(ICE) 아메리카노 2잔", price:4000, img:A+"31900.png", bg:"#fff6d6", friends:12, cat:"food" },
+  innisfree: { id:"innisfree", brand:"이니스프리", name:"그린티 씨드 히알루론산 세럼 80ml", price:32000, sale:"20%", pay:25600, img:A+"c4c3e.png", bg:"#e3f4e4", friends:9, cat:"beauty" },
+  twosome: { id:"twosome", brand:"투썸플레이스", name:"떠먹는 스트로베리 초콜릿 생크림", price:7500, img:A+"19a4b.png", bg:"#fce9e6", friends:8, cat:"food" },
+  paris: { id:"paris", brand:"파리바게뜨", name:"모바일 금액권 2만원권", price:20000, img:A+"b3ac3.png", bg:"#e8f0fa", friends:7, cat:"voucher" },
+  sulbing: { id:"sulbing", brand:"설빙", name:"인절미설빙", price:9900, img:A+"067c9.png", bg:"#f3ede3", friends:6, cat:"food" },
+  bbq: { id:"bbq", brand:"BBQ", name:"황금올리브치킨 + 콜라 1.25L", price:23000, img:A+"70bd1.png", bg:"#fff1dc", friends:5, cat:"food" },
+  jomalone: { id:"jomalone", brand:"조 말론 런던", name:"잉글리쉬 페어 앤 프리지아 코롱 30ml", price:118000, img:A+"c962b.png", bg:"#f6efe6", friends:4, cat:"beauty", place:"조 말론 런던 전국 매장 / 온라인" },
+  diptyque: { id:"diptyque", brand:"딥티크", name:"롬브르 단 로 오 드 뚜왈렛 50ml", price:168000, img:A+"0cab7.png", bg:"#efeae4", cat:"beauty" },
+  kyochon: { id:"kyochon", brand:"교촌치킨", name:"허니콤보 + 콜라 1.25L", price:25000, img:A+"51235.png", bg:"#fff1e6", cat:"food" },
+  gs25: { id:"gs25", brand:"GS25", name:"모바일 상품권 1만원권", price:10000, emoji:"🎫", bg:"#f6f6f6", cat:"voucher" },
+  shinsegae: { id:"shinsegae", brand:"신세계백화점", name:"모바일 상품권 5만원권", price:50000, emoji:"💳", bg:"#f4f0ff", cat:"voucher" },
+  airpods: { id:"airpods", brand:"Apple", name:"에어팟 4 (액티브 노이즈 캔슬링)", price:255600, emoji:"🎧", bg:"#f3f3f3", cat:"digital" },
+  plant: { id:"plant", brand:"플랜테리어", name:"미니 올리브나무 토분 세트", price:28000, emoji:"🪴", bg:"#e7f6ea", cat:"living" },
+  battery: { id:"battery", brand:"샤오미", name:"보조배터리 10000mAh 22.5W", price:23800, emoji:"🔋", bg:"#f7f7f7", cat:"digital" },
+  bacchus: { id:"bacchus", brand:"동아제약", name:"박카스", price:1200, img:A+"c5683.png", bg:"#fff3d6", cat:"cheer" },
+  choco: { id:"choco", brand:"페레로로쉐", name:"페레로로쉐 T3 초콜릿", price:2500, img:A+"f189f.png", bg:"#f4e6d8", cat:"cheer" },
+  vita: { id:"vita", brand:"광동", name:"비타500 1병", price:1300, emoji:"🥤", bg:"#fff4d8", cat:"cheer" },
+  hotsix: { id:"hotsix", brand:"롯데칠성", name:"핫식스 250ml", price:1600, emoji:"⚡", bg:"#111", cat:"cheer" },
+  mega1: { id:"mega1", brand:"메가MGC커피", name:"(ICE) 아메리카노", price:2000, img:A+"31900.png", bg:"#fff6d6", cat:"cheer" },
+  jung: { id:"jung", brand:"정관장", name:"홍삼정 에브리타임 1포", price:3900, emoji:"🍵", bg:"#f8efe4", cat:"cheer" },
+  single: { id:"single", brand:"배스킨라빈스", name:"싱글레귤러 아이스크림", price:3900, img:A+"4984b.png", bg:"#fde7ef", cat:"cheer" },
+  cake: { id:"cake", brand:"투썸플레이스", name:"조각 케이크 + 아메리카노", price:10500, img:A+"19a4b.png", bg:"#fce9e6", cat:"cheer" }
+};
+const friendGifts = ["baskin","starbucks","loccitane","mega","innisfree","twosome","paris","sulbing","bbq","jomalone"];
+const liveRank = ["starbucks","bbq","baskin","mega","kyochon","twosome","gs25","paris","sulbing","shinsegae"];
+const friends = [
+  { id:"hong", name:"홍길동", emoji:"🧑🏻", bg:"#ffe1b8", cake:true, wish:["jomalone","loccitane","diptyque"] },
+  { id:"jang", name:"장화", emoji:"👩🏻", bg:"#d6e9ff", wish:["twosome","paris"] },
+  { id:"ryeon", name:"홍련", emoji:"👧🏻", bg:"#ffd9e4", wish:["innisfree","sulbing"] },
+  { id:"sim", name:"심청", emoji:"👩🏻‍🦰", bg:"#e3f3da", wish:["baskin","mega"] },
+  { id:"chun", name:"성춘향", emoji:"👸🏻", bg:"#f2e2ff", wish:["jomalone","diptyque"] },
+  { id:"mong", name:"이몽룡", emoji:"🤵🏻", bg:"#e6e6e6", wish:["bbq","kyochon"] },
+  { id:"heung", name:"흥부", emoji:"👨🏻‍🌾", bg:"#fff0c2", wish:["paris","gs25"] }
+];
+const categories = [
+  { id:"voucher", emoji:"🎫", name:"교환권/상품권" },
+  { id:"beauty", emoji:"💄", name:"뷰티" },
+  { id:"fashion", emoji:"👕", name:"패션" },
+  { id:"food", emoji:"🍎", name:"식품" },
+  { id:"living", emoji:"🛋️", name:"리빙" },
+  { id:"ticket", emoji:"🎟️", name:"책/티켓" },
+  { id:"kids", emoji:"🧸", name:"유아/반려" },
+  { id:"digital", emoji:"🎧", name:"디지털/가전" }
+];
+const cards = {
+  cheer: { emoji:"💪", text:"오늘도 정말 수고 많았어! 이거 먹고 힘내 :)" },
+  thanks: { emoji:"💛", text:"고마워! 네 마음 잘 받을게." },
+  birth: { emoji:"🎂", text:"생일 축하해! 행복한 하루 보내 🎉" },
+  plain: { emoji:"🎁", text:"그냥, 네가 생각나서." }
+};
+const field = ["starbucks","bbq","baskin","mega","kyochon","twosome","gs25","paris","sulbing","shinsegae","loccitane","innisfree","jomalone","airpods","plant","diptyque"];
+const others = [
+  { id:"starbucks", pct:34 },
+  { id:"bbq", pct:21 },
+  { id:"baskin", pct:12 }
+];
+const publicWish = ["jomalone","innisfree","airpods","twosome","plant"];
+const privateWish = ["baskin","battery"];
+const state = {
+  screen: "home",
+  friend: null,
+  tab: "friends",
+  cat: "beauty",
+  rankFilter: "전체",
+  wishTab: "public",
+  pool: field.slice(),
+  match: 0,
+  winners: [],
+  pick: null,
+  product: "jomalone",
+  qty: 1,
+  card: "birth",
+  payMethod: "kakao",
+  chatGift: "choco",
+  sheet: null,
+  history: [],
+  dir: 1,
+  shown: null
+};
+
+const $ = (s) => document.querySelector(s);
+const won = (n) => n.toLocaleString("ko-KR") + "원";
+const P = (id) => products[id];
+const priceOf = (p) => p.pay || p.price;
+const friendBy = (id) => friends.find((f) => f.id === id);
+
+function sysIcons() {
+  return `<span class="sys" aria-hidden="true">
+    <svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="7" width="3" height="5" rx="0.6" fill="#191919"/><rect x="5" y="5" width="3" height="7" rx="0.6" fill="#191919"/><rect x="10" y="2.5" width="3" height="9.5" rx="0.6" fill="#191919"/><rect x="15" y="0" width="3" height="12" rx="0.6" fill="#191919"/></svg>
+    <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 3.2c1.7 0 3.2.6 4.4 1.7l1.2-1.3A8.2 8.2 0 0 0 8 1.2 8.2 8.2 0 0 0 2.4 3.6L3.6 4.9A6.3 6.3 0 0 1 8 3.2Zm0 3.1c.9 0 1.7.3 2.3.9l1.2-1.3A5 5 0 0 0 8 4.6c-1.3 0-2.4.5-3.3 1.3L5.9 7.2c.6-.6 1.3-.9 2.1-.9ZM8 9.6a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Z" fill="#191919"/></svg>
+    <svg width="26" height="12" viewBox="0 0 26 12"><rect x="0.6" y="0.6" width="22" height="10.8" rx="2.2" fill="none" stroke="#191919" stroke-width="1.2"/><rect x="2" y="2" width="16" height="8" rx="1" fill="#191919"/><rect x="23.2" y="3.5" width="2" height="5" rx="0.6" fill="#191919"/></svg>
+  </span>`;
+}
+function icon(name) {
+  const s = {
+    back: `<svg width="24" height="24" viewBox="0 0 24 24"><path d="M15 5 8 12l7 7" fill="none" stroke="#191919" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    search: `<svg width="24" height="24" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.2" fill="none" stroke="#191919" stroke-width="1.8"/><path d="m16 16 4 4" stroke="#191919" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+    close: `<svg width="24" height="24" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="#191919" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+    menu: `<svg width="24" height="24" viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14" stroke="#191919" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+    home: `<svg width="24" height="24" viewBox="0 0 24 24"><path d="M4 11.2 12 4l8 7.2V20a1 1 0 0 1-1 1h-5.2v-6.2H10.2V21H5a1 1 0 0 1-1-1v-8.8Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>`,
+    grid: `<svg width="24" height="24" viewBox="0 0 24 24"><rect x="4" y="4" width="6.2" height="6.2" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="13.8" y="4" width="6.2" height="6.2" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="4" y="13.8" width="6.2" height="6.2" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="13.8" y="13.8" width="6.2" height="6.2" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>`,
+    trophy: `<svg width="24" height="24" viewBox="0 0 24 24"><path d="M7 4h10v6.2a5 5 0 0 1-10 0V4Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7 6H4.8A2.8 2.8 0 0 0 7.2 10M17 6h2.2A2.8 2.8 0 0 1 16.8 10M12 15.2V18M8.5 20h7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
+    user: `<svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="8.2" r="3.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5.5 19.2c1.2-3 3.5-4.4 6.5-4.4s5.3 1.4 6.5 4.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
+    gift: `<svg width="22" height="22" viewBox="0 0 22 22"><rect x="3" y="9" width="16" height="10" rx="1.4" fill="none" stroke="#191919" stroke-width="1.6"/><path d="M3 9h16M11 9v10M11 9c-2.2 0-3.6-2.4-2.2-3.8C10.2 3.8 11 6.2 11 9Zm0 0c2.2 0 3.6-2.4 2.2-3.8C11.8 3.8 11 6.2 11 9Z" fill="none" stroke="#191919" stroke-width="1.6" stroke-linecap="round"/></svg>`
+  };
+  return s[name] || "";
+}
+function thumb(p, cls = "thumb") {
+  if (p.img) return `<img class="${cls}" src="${p.card && cls === "cover" ? p.card : p.img}" alt="" style="background:${p.bg || "#f6f6f6"}" />`;
+  return `<div class="${cls} ph" style="background:${p.bg || "#f6f6f6"}"><span class="emo">${p.emoji || "🎁"}</span></div>`;
+}
+function fanfare() {
+  const phone = document.getElementById("phone");
+  const layer = document.createElement("div");
+  layer.className = "fanfare";
+  const colors = ["#fee500", "#ff5b7a", "#5ec8ff", "#c084fc", "#fff", "#ff9f43"];
+  for (let i = 0; i < 42; i++) {
+    const bit = document.createElement("i");
+    bit.style.background = colors[i % colors.length];
+    bit.style.setProperty("--left", (18 + Math.random() * 64) + "%");
+    bit.style.setProperty("--x", (Math.random() * 220 - 110) + "px");
+    bit.style.setProperty("--y", (-120 - Math.random() * 280) + "px");
+    bit.style.setProperty("--r", (Math.random() * 520 - 260) + "deg");
+    bit.style.animationDelay = (Math.random() * 0.12) + "s";
+    layer.appendChild(bit);
+  }
+  ["🎉", "✨", "🎊"].forEach((mark, i) => {
+    const bit = document.createElement("b");
+    bit.textContent = mark;
+    bit.style.setProperty("--left", (30 + i * 18) + "%");
+    bit.style.setProperty("--x", (i - 1) * 70 + "px");
+    bit.style.setProperty("--y", "-210px");
+    bit.style.setProperty("--r", "20deg");
+    layer.appendChild(bit);
+  });
+  phone.appendChild(layer);
+  setTimeout(() => layer.remove(), 1200);
+}
+function priceHtml(p) {
+  if (p.sale) return `<span class="off">${p.sale}</span>${won(p.pay)}`;
+  return won(p.price);
+}
+function go(screen, extra) {
+  state.dir = 1;
+  if (state.screen !== screen) state.history.push(state.screen);
+  Object.assign(state, extra || {});
+  state.screen = screen;
+  if (screen !== "cheer" && screen !== "more") state.sheet = null;
+  render();
+}
+function back() {
+  state.dir = -1;
+  const prev = state.history.pop();
+  state.screen = prev || "home";
+  state.sheet = null;
+  render();
+}
+function openProduct(id) {
+  state.product = id;
+  const f = friendBy(state.friend);
+  state.card = f && f.cake ? "birth" : "cheer";
+  go("product");
+}
+function wishDiscount(p) {
+  const f = friendBy(state.friend);
+  if (!f || !f.wish.includes(p.id)) return 0;
+  return Math.round(priceOf(p) * 0.05);
+}
+
+function status(bg) {
+  $("#status").style.background = bg;
+  $("#status").innerHTML = `<b>9:41</b>${sysIcons()}`;
+}
+function header(title, opts = {}) {
+  const backBtn = opts.back === false ? `<span class="icon-btn"></span>` : `<button class="icon-btn" data-act="back" aria-label="뒤로">${icon("back")}</button>`;
+  const gift = opts.gift === false ? "" : `<span class="gift-mark">${icon("gift")}</span>`;
+  const right = opts.close
+    ? `<button class="icon-btn" data-act="home" aria-label="닫기">${icon("close")}</button>`
+    : `<button class="icon-btn" aria-label="검색">${icon("search")}</button><button class="icon-btn" data-act="home" aria-label="닫기">${icon("close")}</button>`;
+  return `<div class="header" style="background:${opts.bg || "#fff"}">${backBtn}${gift}<h1>${title}</h1><div class="spacer"></div>${right}</div>`;
+}
+function nav(active) {
+  const item = (id, label, ic) => `<button class="${active === id ? "on" : ""}" data-go="${id}">${icon(ic)}<span>${label}</span></button>`;
+  return `<nav class="nav">
+    ${item("home","홈","home")}
+    ${item("category","카테고리","grid")}
+    <div class="wish-slot"><span class="nav-spacer"></span><button class="wish-btn ${active === "wish" ? "on" : ""}" data-go="wish"><span class="bubble"><img src="${logo}" alt="" /></span>핑퐁위시</button></div>
+    ${item("rank","랭킹","trophy")}
+    ${item("mypage","마이페이지","user")}
+  </nav>`;
+}
+function productRow(id, n, opts) {
+  const p = P(id);
+  const showNote = !opts || opts.note !== false;
+  const showSale = !opts || opts.sale !== false;
+  const price = showSale ? priceHtml(p) : won(p.price);
+  return `<button class="row" data-product="${id}">
+    ${n ? `<span class="rank">${n}</span>` : ""}
+    ${thumb(p)}
+    <span class="meta">
+      <span class="brand">${p.brand}</span>
+      <span class="name">${p.name}</span>
+      <span class="price">${price}</span>
+      ${showNote && p.friends ? `<span class="note">친구 ${p.friends}명이 선물했어요</span>` : ""}
+    </span>
+  </button>`;
+}
+function gridCard(id, opts) {
+  const p = P(id);
+  return `<button data-product="${id}">
+    ${opts && opts.lock ? `<span class="lock">🔒 나만보기</span>` : ""}
+    ${thumb(p, "cover")}
+    <div class="brand">${p.brand}</div>
+    <div class="name">${p.name}</div>
+    <div class="price">${priceHtml(p)}</div>
+  </button>`;
+}
+
+function renderHome() {
+  const f = friendBy(state.friend);
+  const list = state.tab === "live" ? liveRank : friendGifts;
+  let hero;
+  if (!f) {
+    hero = `<div class="who"><div class="plus">+</div><div><h2>누구에게<br>선물하실 건가요?</h2><p>친구를 고르면 핑퐁 위시를 보여드려요</p></div></div>`;
+  } else {
+    hero = `<div class="friend-head">
+      <div class="avatar" style="background:${f.bg}">${f.emoji}</div>
+      <div><h2 style="margin:0;font-size:20px;line-height:1.35">${f.name}님에게<br>선물할게요</h2>
+      ${f.cake ? `<span class="tag">오늘 생일 🎂</span>` : `<p style="margin:4px 0 0;color:#8a8a8a;font-size:13px">핑퐁 위시를 확인해 보세요</p>`}</div>
+    </div>
+    <div class="wish-strip">
+      <div class="label">${f.name}님의 핑퐁 위시 <em>선물하면 즉시 5% 할인</em></div>
+      <div class="hscroll">${f.wish.map((id) => {
+        const p = P(id);
+        return `<button class="mini" data-product="${id}">${thumb(p, "cover")}<div class="brand">${p.brand}</div><div class="name">${p.name}</div><div class="price">${won(priceOf(p))}</div></button>`;
+      }).join("")}</div>
+    </div>`;
+  }
+  const friendsHtml = friends.map((fr) => `<button class="friend ${state.friend === fr.id ? "on" : ""}" data-friend="${fr.id}">
+    <span class="avatar" style="background:${fr.bg}">${fr.emoji}</span>
+    ${fr.cake ? `<span class="cake">🎂</span>` : ""}
+    ${fr.name}
+  </button>`).join("") + `<button class="friend"><span class="avatar" style="background:#f6f6f6;color:#999;font-size:18px">···</span>전체</button>`;
+  return `${header("선물하기", { back: false })}
+    <div class="scroll">
+      <section class="card">${hero}
+        <button class="edit ${f ? "" : "off"}" data-act="clear">수정</button>
+        <div class="friends">${friendsHtml}</div>
+      </section>
+      <div class="cats">${categories.map((c) => `<button data-cat="${c.id}"><span class="ico">${c.emoji}</span>${c.name}</button>`).join("")}</div>
+      <button class="banner" data-go="rank">
+        <span><small>10월 1주차 랭킹 예측 게임</small><strong>진짜 1위는 무엇일까요?</strong><em>맞히면 교환권 증정 ›</em></span>
+        <span class="trophy">🏆</span>
+      </button>
+      <div class="section-title">지금 많이 주고받는 선물</div>
+      <div class="tabs">
+        <button class="${state.tab === "friends" ? "on" : ""}" data-tab="friends">내 친구들이 보낸 선물</button>
+        <button class="${state.tab === "live" ? "on" : ""}" data-tab="live">실시간 선물 랭킹</button>
+      </div>
+      <div class="plist">${list.map((id, i) => productRow(id, i + 1, state.tab === "live" ? { note: false, sale: false } : undefined)).join("")}</div>
+      <button class="more" data-go="rank">랭킹 전체보기 ›</button>
+      <div class="pad"></div>
+    </div>${nav("home")}`;
+}
+function renderCategory() {
+  const items = Object.values(products).filter((p) => p.cat === state.cat && p.cat !== "cheer");
+  const shown = items.length ? items : [];
+  return `${header("카테고리")}
+    <div class="scroll">
+      <div class="chips">${categories.map((c) => `<button class="${state.cat === c.id ? "on" : ""}" data-cat="${c.id}">${c.emoji} ${c.name}</button>`).join("")}</div>
+      <div class="grid">${shown.length ? shown.map((p) => gridCard(p.id)).join("") : `<p style="grid-column:1/-1;color:#999;padding:40px 8px">이 카테고리의 선물을 준비하고 있어요.</p>`}</div>
+    </div>${nav("category")}`;
+}
+function renderMypage() {
+  const rows = [
+    ["받은 선물함", "home"],
+    ["보낸 선물 · 주문 내역", "home"],
+    ["핑퐁 위시 관리", "wish"],
+    ["진짜 1위 맞히기 참여 내역", "rank"],
+    ["뜻밖의 선물 체험 (채팅방)", "chat"]
+  ];
+  return `${header("마이페이지")}
+    <div class="scroll">
+      <div class="profile"><div class="avatar" style="background:#ffe8a3">🐥</div><div><h2>김삼공</h2><p>핑퐁지수 72점 · Lv.3 랠리 마스터</p></div></div>
+      <div class="point"><div><small>사용 가능한 카카오페이 포인트</small><strong>1,240P</strong></div><img src="${logo}" alt="" /></div>
+      <div class="menu">${rows.map(([label, to]) => `<button data-go="${to}">${label}<span>›</span></button>`).join("")}</div>
+    </div>${nav("mypage")}`;
+}
+function renderWish() {
+  const list = state.wishTab === "public" ? publicWish : privateWish;
+  return `${header("핑퐁위시", { gift: false })}
+    <div class="scroll">
+      <div class="pingpong">
+        <img class="scene a" src="${A}pp-give.png" alt="" />
+        <img class="scene b" src="${A}pp-receive.png" alt="" />
+        <div class="pp-copy">
+          <span class="event">EVENT</span>
+          <h2>핑퐁 위시리스트</h2>
+          <div class="benefit">
+            <div><b>주는 사람</b>친구의 위시 상품으로 선물하면 결제할 때 바로 5% 할인!</div>
+            <div><b>받는 사람</b>내 위시 상품을 선물 받으면 1% 포인트 적립!</div>
+          </div>
+        </div>
+        <div class="pp-slogan">너도 받고 나도 받는 혜택!</div>
+      </div>
+      <section class="score">
+        <div class="score-top"><img src="${logo}" alt="" /><div><div style="color:#888;font-size:13px">나의 핑퐁지수</div><b style="font-size:22px">72점</b><span class="lv">Lv.3 랠리 마스터</span></div></div>
+        <div class="meter"><i></i></div>
+        <div class="meter-labels"><span>0</span><span>다음 레벨까지 28점</span><span>100</span></div>
+        <div class="stats">
+          <div><small>보낸 위시 선물</small><b>5회</b></div>
+          <div><small>받은 위시 선물</small><b>3회</b></div>
+          <div><small>적립 포인트</small><b>1,240P</b></div>
+        </div>
+      </section>
+      <div class="seg">
+        <button class="${state.wishTab === "public" ? "on" : ""}" data-wishtab="public">친구공개 5</button>
+        <button class="${state.wishTab === "private" ? "on" : ""}" data-wishtab="private">나만보기 2</button>
+      </div>
+      <p style="padding:14px 16px 0;margin:0;color:#888;font-size:13px">${state.wishTab === "public" ? "친구가 이 상품으로 선물하면 친구는 5% 할인, 나는 1% 적립돼요" : "나만보기 위시는 친구에게 보이지 않아요"}</p>
+      <div class="grid">${list.map((id) => gridCard(id, { lock: state.wishTab === "private" })).join("")}
+        <button class="add-tile" data-go="category"><div><div style="font-size:28px">+</div>위시 추가하기</div></button>
+      </div>
+    </div>${nav("wish")}`;
+}
+function renderRank() {
+  return `${header("랭킹")}
+    <div class="scroll">
+      <section class="hero-card">
+        <span class="pill">10월 1주차 · 9.28(월) ~ 10.04(일)</span>
+        <h2>진짜 1위 맞히기</h2>
+        <p>이번 주 진짜 선물 1위는 무엇일까요?<br>일요일 결과 공개, 맞히면 교환권을 드려요!</p>
+        <div class="trophy-wrap"><span class="sp a">✨</span><span class="sp b">⭐</span>🏆</div>
+        <button class="start" data-act="start">START!</button>
+      </section>
+      <div class="section-title">실시간 선물 랭킹</div>
+      <div class="filters">${["전체","여성","남성","청소년"].map((n) => `<button class="${state.rankFilter === n ? "on" : ""}" data-filter="${n}">${n}</button>`).join("")}</div>
+      <div class="plist">${liveRank.map((id, i) => productRow(id, i + 1, { note: false, sale: false })).join("")}</div>
+    </div>${nav("rank")}`;
+}
+function roundLabel() {
+  const n = state.pool.length;
+  const step = state.match + 1;
+  const total = n / 2;
+  if (n === 2) return "결승";
+  const name = { 16: "16강", 8: "8강", 4: "4강" }[n] || "토너먼트";
+  return `${name} · ${step}/${total}`;
+}
+function renderMatch() {
+  const a = P(state.pool[state.match * 2]);
+  const b = P(state.pool[state.match * 2 + 1]);
+  const played = (16 - state.pool.length) + state.match;
+  const progress = Math.round((played / 15) * 100);
+  const card = (p) => `<button data-pick="${p.id}">
+    ${thumb({ ...p, card: p.card }, "cover")}
+    <div class="brand">${p.brand}</div>
+    <div class="name">${p.name}</div>
+    <div class="price">${won(priceOf(p))}</div>
+  </button>`;
+  return `${header("진짜 1위 맞히기")}
+    <div class="scroll">
+      <div class="match-head"><h2>진짜 1위 맞히기</h2><div class="badge">${roundLabel()}</div></div>
+      <div class="bar"><i style="width:${progress}%"></i></div>
+      <div class="vs">${card(a)}${card(b)}<div class="vs-mark">VS</div></div>
+      <p class="hint">이번 주 더 많이 선물될 것 같은 상품을 골라주세요</p>
+    </div>`;
+}
+function renderResult() {
+  const mine = P(state.pick || "starbucks");
+  return `${header("진짜 1위 맞히기")}
+    <div class="scroll">
+      <div class="result-note"><h2>✦ 결과는 10월 4일에 나옵니다! ✦</h2><p>정답을 맞히면 알림과 함께 교환권을 보내드려요</p></div>
+      <div class="picked">
+        <span class="crown">👑 내가 고른 진짜 1위</span>
+        ${thumb(mine, "cover")}
+        <div class="body"><div class="brand" style="color:#8a8a8a;font-size:12px">${mine.brand}</div><div style="font-size:16px;margin-top:4px">${mine.name}</div><div style="font-weight:800;font-size:18px;margin-top:6px">${won(priceOf(mine))}</div></div>
+      </div>
+      <div class="split">
+        <button class="ghost" data-act="share">공유하기</button>
+        <button class="solid" data-act="others">다른 사람 결과 보기</button>
+      </div>
+      <div class="section-title" id="others">다른 사람은 무엇을 골랐을까요?</div>
+      <div class="plist">${others.map((o, i) => {
+        const p = P(o.id);
+        return `<div class="row" style="align-items:center"><span class="rank">${i + 1}</span>${thumb(p)}<span class="meta"><span class="brand">${p.brand}</span><span class="name">${p.name}</span><span class="track"><i style="width:${o.pct}%"></i></span></span><span class="pct">${o.pct}%</span></div>`;
+      }).join("")}</div>
+      <button class="more" data-act="replay">다시 골라보기</button>
+      <div class="pad"></div>
+    </div>`;
+}
+function renderProduct() {
+  const p = P(state.product);
+  const f = friendBy(state.friend);
+  const disc = wishDiscount(p);
+  const who = f ? f.name : "홍길동";
+  const banner = disc ? `<div class="wish-banner"><img src="${logo}" alt="" /><p><b>${who}님의 핑퐁 위시 상품이에요!</b>지금 선물하면 결제 시 <em>${won(disc)}</em> 즉시 할인되고, ${who}님에게도 1% 포인트가 적립돼요.</p></div>` : "";
+  return `${header("선물하기")}
+    <div class="scroll">
+      ${thumb(p, "hero-img")}
+      <div class="detail">
+        <div class="brand">${p.brand} ›</div>
+        <h2>${p.name}</h2>
+        <div class="price">${priceHtml(p)}</div>
+        ${banner}
+        <div class="specs">
+          <div><b>유효기간</b><span>구매일로부터 93일</span></div>
+          <div><b>교환처</b><span>${p.place || p.brand}</span></div>
+          <div><b>선물 후기</b><span>⭐ 4.9 (2,318)</span></div>
+        </div>
+      </div>
+      <p class="disclaimer">본 페이지는 프로젝트의 일환으로 제작되었으며, 실제 결제가 이루어지지 않습니다.</p>
+    </div>
+    <div class="bottom-bar"><button class="icon-sq" data-go="wish">♡</button><button class="cta" data-go="pay">선물하기</button></div>`;
+}
+function renderPay(mode) {
+  const chat = mode === "chat";
+  const p = P(chat ? state.chatGift : state.product);
+  const f = chat ? friendBy("ryeon") : (friendBy(state.friend) || friendBy("hong"));
+  const unit = priceOf(p);
+  const disc = chat ? 0 : wishDiscount(p);
+  const total = (unit * state.qty) - disc;
+  const buttonPrice = total;
+  const card = cards[state.card];
+  const methods = [["kakao","카카오페이"],["card","신용·체크카드"],["phone","휴대폰 결제"],["bank","무통장 입금"]];
+  return `${header("선물하기")}
+    <div class="scroll">
+      <section class="block"><h3>받는 사람</h3>
+        <div class="person"><div class="avatar" style="background:${f.bg}">${f.emoji}</div>
+          <div><b>${f.name}</b><small>${chat ? "카카오톡 친구" : "카카오톡 친구 · 핑퐁 위시 상품 선물"}</small></div>
+          <button class="change" data-go="home">변경</button>
+        </div>
+      </section>
+      <section class="block"><h3>메시지 카드</h3>
+        <div class="msg-chips">
+          <button class="${state.card === "cheer" ? "on" : ""}" data-card="cheer">💪 응원해</button>
+          <button class="${state.card === "thanks" ? "on" : ""}" data-card="thanks">💛 고마워</button>
+          <button class="${state.card === "birth" ? "on" : ""}" data-card="birth">🎂 생일 축하해</button>
+          <button class="${state.card === "plain" ? "on" : ""}" data-card="plain">🎁 그냥</button>
+        </div>
+        <div class="letter"><div class="emo">${card.emoji}</div><p>${card.text}</p><small>${card.text.length}/100</small></div>
+      </section>
+      <section class="block"><h3>선물 상품</h3>
+        <div class="pay-row">${thumb(p)}<div class="meta"><div class="brand">${p.brand}</div><div class="name">${p.name}</div><div class="price">${won(unit)}</div></div>
+          <div class="qty"><button data-qty="-1">−</button><span>${state.qty}</span><button data-qty="1">+</button></div>
+        </div>
+      </section>
+      <section class="block"><h3>결제 수단</h3>
+        ${methods.map(([id, label]) => `<button class="pay-opt ${state.payMethod === id ? "on" : ""}" data-pay="${id}"><span class="radio"></span>${id === "kakao" ? `<b style="background:#fee500;border-radius:4px;padding:2px 6px;font-size:12px">pay</b>` : ""}${label}</button>`).join("")}
+      </section>
+      <section class="block"><h3>결제 금액</h3>
+        <div class="sum"><span>상품 금액</span><span>${won(unit * state.qty)}</span></div>
+        ${disc ? `<div class="sum"><span>핑퐁 위시 즉시 할인 (5%)</span><span class="minus">−${won(disc)}</span></div>` : ""}
+        <div class="sum total"><span>총 결제 금액</span><span>${won(total)}</span></div>
+        ${disc ? `<div class="note-box">🎁 ${f.name}님 위시 상품이라 ${won(disc)} 할인됐어요. ${f.name}님에게도 ${Math.round(total * 0.01).toLocaleString("ko-KR")}P 핑퐁 포인트가 쌓여요.</div>` : ""}
+      </section>
+      <p class="disclaimer">본 페이지는 프로젝트의 일환으로 제작되었으며, 실제 결제가 이루어지지 않습니다.</p>
+    </div>
+    <div class="bottom-bar"><button class="cta dark" data-act="${chat ? "chatpay" : "pay"}">${won(buttonPrice)} 결제하기</button></div>`;
+}
+function renderDone(mode) {
+  const chat = mode === "chat";
+  const p = P(chat ? state.chatGift : state.product);
+  const f = chat ? friendBy("ryeon") : (friendBy(state.friend) || friendBy("hong"));
+  const shown = chat ? p.price : (priceOf(p) * state.qty - wishDiscount(p));
+  const gift = `<svg class="gift-art" viewBox="0 0 110 110" aria-hidden="true">
+      <ellipse cx="55" cy="102" rx="26" ry="4" fill="#000" opacity=".08"/>
+      <path d="M28 50h54l8-8v44l-8 8H28V50z" fill="#E8B02E"/>
+      <path d="M82 42h8v44l-8 8V50z" fill="#C98A12"/>
+      <rect x="24" y="48" width="62" height="48" rx="3" fill="#F5C518"/>
+      <rect x="20" y="42" width="70" height="14" rx="3" fill="#FFD84A"/>
+      <rect x="48" y="42" width="14" height="54" fill="#F04438"/>
+      <rect x="20" y="62" width="70" height="13" fill="#E53935"/>
+      <path d="M55 40c-8-14-26-12-24 0 8 2 16 2 24 0z" fill="#FF5A4F"/>
+      <path d="M55 40c8-14 26-12 24 0-8 2-16 2-24 0z" fill="#E23B32"/>
+      <ellipse cx="40" cy="34" rx="7" ry="4" fill="#FF8A80" opacity=".55"/>
+      <circle cx="55" cy="40" r="6" fill="#C62828"/>
+      <circle cx="55" cy="39" r="2.2" fill="#FF8A80"/>
+    </svg>`;
+  const body = `<div class="done"><div class="big">${gift}</div><h2>${f.name}님에게<br>선물을 보냈어요!</h2><p>카카오톡 채팅방으로 선물 메시지가 전달됐어요.</p></div>
+    <div class="receipt">${thumb(p)}<div><div class="brand" style="color:#8a8a8a;font-size:12px">${p.brand}</div><div>${p.name}</div><b>${won(shown)}</b></div></div>`;
+  if (!chat) {
+    return `<div class="scroll done-page" style="background:#fff">
+      ${body}
+      <div class="done-note">
+        <div class="rally-line"><img src="${logo}" alt="" />핑퐁 랠리 성공! 나의 카카오 포인트 +4점</div>
+        <p>본 페이지는 프로젝트의 일환으로 제작되었으며, 실제 결제가 이루어지지 않습니다.</p>
+      </div>
+    </div>
+    <div class="bottom-bar"><button class="cta" data-act="reset-home">선물하기 홈으로</button></div>`;
+  }
+  return `<div class="scroll done-page" style="background:#fff">
+    ${body}
+    <div class="done-note center"><p>본 페이지는 프로젝트의 일환으로 제작되었으며, 실제 결제가 이루어지지 않습니다.</p></div>
+  </div>
+  <div class="done-dock">
+    <button class="cta" data-go="chat">채팅방으로 돌아가기</button>
+    <button class="line" data-go="home">선물하기 홈으로</button>
+  </div>`;
+}
+function chatThread() {
+  return `<div class="date"><span>2026년 10월 1일 목요일</span></div>
+    <div class="msg"><div class="avatar" style="background:#ffd9e4">👧🏻</div><div><span class="who">홍련</span><div style="display:flex;gap:6px;align-items:flex-end"><div class="bubble-txt">헐 웬 커피야 ㅋㅋㅋ 잘 마실게!!</div><span class="time">오후 6:20</span></div></div></div>
+    <div class="date"><span>2026년 10월 2일 금요일</span></div>
+    <div class="msg"><div class="avatar" style="background:#ffd9e4">👧🏻</div><div><span class="who">홍련</span><div style="display:flex;gap:6px;align-items:flex-end"><div class="bubble-txt">나 오늘 발표 드디어 끝났어</div><span class="time">오후 8:31</span></div></div></div>
+    <div class="msg"><div class="avatar" style="background:#ffd9e4">👧🏻</div><div><span class="who">홍련</span><div style="display:flex;gap:6px;align-items:flex-end"><div class="bubble-txt">어제 밤새서 준비했더니 진짜 <b>힘들다</b> ㅠㅠ</div><span class="time">오후 8:31</span></div></div></div>
+    <div class="msg me"><span class="time">오후 8:32</span><div class="bubble-txt">헐 진짜 <b>수고했어</b>!!</div></div>`;
+}
+function chatChrome(body, sheet) {
+  return `<div class="chat">
+    <div class="chat-head"><button class="back-count" data-go="mypage">${icon("back")} 14</button><h1>홍련</h1><div class="spacer"><button class="icon-btn">${icon("search")}</button><button class="icon-btn">${icon("menu")}</button></div></div>
+    <div class="thread">${body}</div>
+    <div class="composer-wrap">
+      <button class="heart-cta" data-act="cheer">🎁 마음을 전하세요 ♡</button>
+      <div class="composer"><button class="plus">+</button><div class="field">메시지 입력</div><button style="width:34px;font-size:20px">☺</button><button class="hash">#</button></div>
+    </div>
+    ${sheet || ""}
+  </div>`;
+}
+function renderCheer() {
+  const item = (id) => {
+    const p = P(id);
+    return `<button data-chatgift="${id}">${p.img ? `<img class="round-img" src="${p.img}" alt="" style="background:${p.bg}" />` : `<div class="round-img ph" style="background:${p.bg}"><span class="emo">${p.emoji}</span></div>`}<span>${p.name.split(" ")[0]}</span><small>${won(p.price)}</small></button>`;
+  };
+  const sheet = `<div class="sheet-mask"><div class="sheet"><div class="grab"></div>
+    <h3><span class="avatar" style="background:#ffd9e4;width:28px;height:28px;border-radius:10px;display:inline-grid;place-items:center;font-size:16px;margin-right:6px">👧🏻</span>홍련님에게 <span class="mark">응원의 선물</span> 🎉</h3>
+    <p class="sub">"힘들다"는 홍련님에게 작은 마음을 전해보세요</p>
+    <div class="cheer-row">${item("bacchus")}${item("choco")}<button data-act="more"><div class="dash">+</div><span>더보기</span></button></div>
+  </div></div>`;
+  return chatChrome(chatThread(), sheet);
+}
+function renderMore() {
+  const ids = ["vita","hotsix","mega1","jung","single","cake"];
+  const sheet = `<div class="sheet-mask"><div class="sheet" style="height:72%">
+    <div class="sheet-head"><div><h3 style="margin:0">더 많은 응원 선물</h3><p class="sub">부담 없이 마음을 전하기 좋은 선물</p></div><button data-act="cheer">×</button></div>
+    <div class="more-grid">${ids.map((id) => gridCard(id).replace("data-product", "data-chatgift")).join("")}</div>
+  </div></div>`;
+  return chatChrome(chatThread(), sheet);
+}
+
+function render() {
+  const chatBg = ["chat","cheer","more"].includes(state.screen);
+  status(chatBg ? "#b2c7da" : "#fff");
+  const app = $("#app");
+  const map = {
+    home: renderHome,
+    category: renderCategory,
+    mypage: renderMypage,
+    wish: renderWish,
+    rank: renderRank,
+    match: renderMatch,
+    result: renderResult,
+    product: renderProduct,
+    pay: () => renderPay("gift"),
+    done: () => renderDone("gift"),
+    chat: () => chatChrome(chatThread()),
+    cheer: renderCheer,
+    more: renderMore,
+    chatpay: () => renderPay("chat"),
+    chatdone: () => renderDone("chat")
+  };
+  const changed = state.shown !== state.screen;
+  app.innerHTML = (map[state.screen] || renderHome)();
+  const sc = app.querySelector(".scroll, .thread");
+  if (sc) sc.scrollTop = 0;
+  if (changed) {
+    app.classList.remove("fwd", "back");
+    void app.offsetWidth;
+    app.classList.add(state.dir < 0 ? "back" : "fwd");
+    state.shown = state.screen;
+  }
+  const chatMode = ["chat","cheer","more","chatpay","chatdone"].includes(state.screen);
+  document.getElementById("open-gift").classList.toggle("on", !chatMode);
+  document.getElementById("open-chat").classList.toggle("on", chatMode);
+}
+
+document.getElementById("app").addEventListener("click", (e) => {
+  const t = e.target.closest("[data-go],[data-act],[data-friend],[data-product],[data-tab],[data-cat],[data-filter],[data-wishtab],[data-pick],[data-card],[data-pay],[data-qty],[data-chatgift]");
+  if (!t) return;
+  if (t.dataset.go) {
+    if (t.dataset.go === "home") { state.dir = -1; state.history = []; state.screen = "home"; render(); return; }
+    if (t.dataset.go === "chat") { state.card = "cheer"; state.qty = 1; }
+    go(t.dataset.go);
+    return;
+  }
+  if (t.dataset.friend) { state.friend = t.dataset.friend; render(); return; }
+  if (t.dataset.tab) { state.tab = t.dataset.tab; render(); return; }
+  if (t.dataset.cat) { state.cat = t.dataset.cat; if (state.screen !== "category") go("category"); else render(); return; }
+  if (t.dataset.filter) { state.rankFilter = t.dataset.filter; render(); return; }
+  if (t.dataset.wishtab) { state.wishTab = t.dataset.wishtab; render(); return; }
+  if (t.dataset.product) { openProduct(t.dataset.product); return; }
+  if (t.dataset.pick) {
+    state.pick = t.dataset.pick;
+    state.winners.push(t.dataset.pick);
+    state.match += 1;
+    if (state.match >= state.pool.length / 2) {
+      if (state.winners.length === 1) { go("result"); fanfare(); }
+      else {
+        state.pool = state.winners.slice();
+        state.winners = [];
+        state.match = 0;
+        render();
+      }
+    } else render();
+    return;
+  }
+  if (t.dataset.card) { state.card = t.dataset.card; render(); return; }
+  if (t.dataset.pay) { state.payMethod = t.dataset.pay; render(); return; }
+  if (t.dataset.qty) { state.qty = Math.max(1, state.qty + Number(t.dataset.qty)); render(); return; }
+  if (t.dataset.chatgift) { state.chatGift = t.dataset.chatgift; state.card = "cheer"; state.qty = 1; go("chatpay"); return; }
+  const act = t.dataset.act;
+  if (act === "back") back();
+  if (act === "home" || act === "reset-home") { state.dir = -1; state.friend = null; state.history = []; state.screen = "home"; render(); }
+  if (act === "clear") { state.friend = null; render(); }
+  if (act === "start" || act === "replay") {
+    state.pool = field.slice();
+    state.winners = [];
+    state.match = 0;
+    state.pick = null;
+    go("match");
+  }
+  if (act === "others") { const el = document.getElementById("others"); if (el) el.scrollIntoView({ behavior: "smooth" }); }
+  if (act === "share") alert("공유 링크를 복사했어요. (프로토타입)");
+  if (act === "pay") go("done");
+  if (act === "chatpay") go("chatdone");
+  if (act === "cheer") {
+    const fromChat = state.screen === "chat";
+    state.dir = 1;
+    state.screen = "cheer";
+    render();
+    if (fromChat) fanfare();
+  }
+  if (act === "more") { state.screen = "more"; render(); }
+});
+
+document.getElementById("open-gift").addEventListener("click", () => {
+  state.dir = -1;
+  state.history = [];
+  state.screen = "home";
+  render();
+});
+document.getElementById("open-chat").addEventListener("click", () => {
+  state.dir = 1;
+  state.history = [];
+  state.screen = "chat";
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
