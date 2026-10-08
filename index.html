@@ -758,8 +758,7 @@ function renderCategory() {
   const shown = items.length ? items : [];
   return `${header("카테고리")}
     <div class="scroll">
-      <div class="chips">${categories.map((c) => `<button class="${state.cat === c.id ? "on" : ""}" data-cat="${c.id}">${c.emoji} ${c.name}</button>`).join("")}</div>
-      <div class="grid">${shown.length ? shown.map((p) => gridCard(p.id)).join("") : `<p style="grid-column:1/-1;color:#999;padding:40px 8px">이 카테고리의 선물을 준비하고 있어요.</p>`}</div>
+<div class="chips">${categories.map((c) => `<button class="${state.cat === c.id ? "on" : ""}" data-cat="${c.id}" data-kt-event="category_item_click" data-kt-label="${c.name}">${c.emoji} ${c.name}</button>`).join("")}</div>      <div class="grid">${shown.length ? shown.map((p) => gridCard(p.id)).join("") : `<p style="grid-column:1/-1;color:#999;padding:40px 8px">이 카테고리의 선물을 준비하고 있어요.</p>`}</div>
     </div>${nav("category")}`;
 }
 function renderMypage() {
