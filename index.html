@@ -739,8 +739,7 @@ function renderHome() {
         <button class="edit ${f ? "" : "off"}" data-act="clear">수정</button>
         <div class="friends">${friendsHtml}</div>
       </section>
-      <div class="cats">${categories.map((c) => `<button data-cat="${c.id}"><span class="ico">${c.emoji}</span>${c.name}</button>`).join("")}</div>
-      <button class="banner" data-go="rank">
+<div class="cats">${categories.map((c) => `<button data-cat="${c.id}" data-kt-event="category_item_click" data-kt-label="${c.name}"><span class="ico">${c.emoji}</span>${c.name}</button>`).join("")}</div>      <button class="banner" data-go="rank">
         <span><small>10월 1주차 랭킹 예측 게임</small><strong>진짜 1위는 무엇일까요?</strong><em>맞히면 교환권 증정 ›</em></span>
         <span class="trophy">🏆</span>
       </button>
